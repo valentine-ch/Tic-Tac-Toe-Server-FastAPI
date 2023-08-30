@@ -126,6 +126,9 @@ async def invite_user(invitation: Invitation, inviter: str = Depends(verify_toke
     if invitation.invited not in waiting_users:
         raise HTTPException(status_code=400, detail="Invited user is not waiting for a game")
 
+    if invitation.invited == inviter:
+        raise HTTPException(status_code=400, detail="You cannot invite yourself")
+
     if invitation.grid_properties.size < 3 or invitation.grid_properties.size > 26 or \
             invitation.grid_properties.winning_line > invitation.grid_properties.size:
         raise HTTPException(status_code=400, detail="Grid properties not allowed")
