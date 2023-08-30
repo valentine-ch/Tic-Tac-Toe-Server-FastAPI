@@ -66,7 +66,9 @@ async def create_user(credentials: HTTPBasicCredentials = Depends(security)):
         cursor.execute(insert_query, (username, hashed_password))
         connection.commit()
 
-        return {"status": "User created"}
+        token = generate_token(username)
+
+        return {"status": "User created", "token": token}
 
 
 @app.post("/login")
@@ -95,7 +97,7 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
         try:
             if ph.verify(result[0], password):
                 token = generate_token(username)
-                return {'status': 'Logged in', 'token': token}
+                return {"status": "Logged in", "token": token}
             else:
                 raise HTTPException(status_code=400, detail="Incorrect username or password")
         except Argon2Error:
@@ -124,6 +126,10 @@ async def invite_user(invitation: Invitation, inviter: str = Depends(verify_toke
     if invitation.invited not in waiting_users:
         raise HTTPException(status_code=400, detail="Invited user is not waiting for a game")
 
+    if invitation.grid_properties.size < 3 or invitation.grid_properties.size > 26 or \
+            invitation.grid_properties.winning_line > invitation.grid_properties.size:
+        raise HTTPException(status_code=400, detail="Grid properties not allowed")
+
     invitation_id = invitation_manager.create_invitation(inviter=inviter,
                                                          invited=invitation.invited,
                                                          grid_properties=invitation.grid_properties,
@@ -140,7 +146,7 @@ async def poll_invitations(username: str = Depends(verify_token)):
 
 @app.get("/poll_invitation_status")
 async def poll_invitation_status(invitation_id: str, username: str = Depends(verify_token)):
-    status = invitation_manager.get_status(invitation_id)
+    status = invitation_manager.get_status(invitation_id, username)
     if status == "accepted":
         return {"status": status, "game_id": invitation_manager.get_game_id(invitation_id)}
     else:
@@ -154,7 +160,7 @@ async def respond_invitation(invitation_response: InvitationResponse, username: 
 
     if response.lower() == "accept":
         invitation = invitation_manager.invitations.get(invitation_id)
-        if invitation and invitation['invited'] == username and invitation['status'] == "pending":
+        if invitation and invitation["invited"] == username and invitation["status"] == "pending":
             size = invitation["grid_properties"].size
             winning_line = invitation["grid_properties"].winning_line
 
@@ -170,11 +176,17 @@ async def respond_invitation(invitation_response: InvitationResponse, username: 
 
             return {"game_id": game_id}
 
-        else:
-            raise HTTPException(status_code=400, detail="Invalid invitation or already responded")
+        elif invitation is None:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        elif invitation["invited"] != username:
+            raise HTTPException(status_code=403, detail="This invitation is not for you")
+        elif invitation["status"] == "cancelled":
+            raise HTTPException(status_code=410, detail="Invitation cancelled by inviter")
+        elif invitation["status"] != "pending":
+            raise HTTPException(status_code=409, detail="Invitation already responded to")
 
     elif response.lower() == "decline":
-        invitation_manager.decline_invitation(invitation_id)
+        invitation_manager.decline_invitation(invitation_id, username)
         return {"detail": "Invitation declined"}
     else:
         raise HTTPException(status_code=400, detail="Invalid response")
@@ -182,7 +194,7 @@ async def respond_invitation(invitation_response: InvitationResponse, username: 
 
 @app.post("/cancel_invitation")
 async def cancel_invitation(invitation_id: str, username: str = Depends(verify_token)):
-    invitation_manager.cancel_invitation(invitation_id)
+    invitation_manager.cancel_invitation(invitation_id, username)
     return {"detail": "Invitation cancelled"}
 
 
@@ -214,6 +226,9 @@ async def poll_game(game_id, username: str = Depends(verify_token)):
     game = game_manager.find_game_by_id(game_id)
     if game is None:
         raise HTTPException(status_code=404, detail="Game not found")
+
+    if username != game.x_player_name and username != game.o_player_name:
+        raise HTTPException(status_code=403, detail="You are not a player in this game")
 
     last_move = game.last_move
 

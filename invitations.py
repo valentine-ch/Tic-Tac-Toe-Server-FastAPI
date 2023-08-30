@@ -35,17 +35,29 @@ class InvitationManager:
                 invitations.append(invitation_details)
         return invitations
 
-    def cancel_invitation(self, invitation_id: str):
-        if invitation_id in self.invitations:
+    def cancel_invitation(self, invitation_id: str, username: str):
+        if invitation_id not in self.invitations:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        elif self.invitations[invitation_id]['inviter'] != username:
+            raise HTTPException(status_code=403, detail="This invitation is not yours")
+        elif self.invitations[invitation_id]['status'] == "cancelled":
+            raise HTTPException(status_code=409, detail="Invitation already cancelled")
+        elif self.invitations[invitation_id]['status'] == "accepted":
+            raise HTTPException(status_code=409, detail="Invitation is accepted")
+        else:
             self.invitations[invitation_id]['status'] = "cancelled"
-        else:
-            raise HTTPException(status_code=404, detail="Invitation not found")
 
-    def decline_invitation(self, invitation_id: str):
-        if invitation_id in self.invitations:
-            self.invitations[invitation_id]['status'] = "declined"
-        else:
+    def decline_invitation(self, invitation_id: str, username: str):
+        if invitation_id not in self.invitations:
             raise HTTPException(status_code=404, detail="Invitation not found")
+        elif self.invitations[invitation_id]['invited'] != username:
+            raise HTTPException(status_code=403, detail="This invitation is not for you")
+        elif self.invitations[invitation_id]['status'] == "cancelled":
+            raise HTTPException(status_code=410, detail="Invitation cancelled by inviter")
+        elif self.invitations[invitation_id]['status'] != "pending":
+            raise HTTPException(status_code=409, detail="Invitation already responded to")
+        else:
+            self.invitations[invitation_id]['status'] = "declined"
 
     def accept_invitation(self, invitation_id: str, game_id: str):
         if invitation_id in self.invitations:
@@ -54,11 +66,13 @@ class InvitationManager:
         else:
             raise HTTPException(status_code=404, detail="Invitation not found")
 
-    def get_status(self, invitation_id: str):
-        if invitation_id in self.invitations:
-            return self.invitations[invitation_id]['status']
-        else:
+    def get_status(self, invitation_id: str, username: str):
+        if invitation_id not in self.invitations:
             raise HTTPException(status_code=404, detail="Invitation not found")
+        elif self.invitations[invitation_id]['inviter'] != username:
+            raise HTTPException(status_code=403, detail="This invitation is not yours")
+        else:
+            return self.invitations[invitation_id]['status']
 
     def get_game_id(self, invitation_id: str):
         if invitation_id in self.invitations:
