@@ -218,10 +218,7 @@ async def make_move(new_move: NewMove, username: str = Depends(verify_token)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "success": True,
-        "game_state": game.state
-    }
+    return {"game_state": game.state}
 
 
 @app.get("/poll_game")
@@ -237,8 +234,12 @@ async def poll_game(game_id, username: str = Depends(verify_token)):
 
     if last_move and last_move["player_name"] != username:
         return {
+            "new_move": True,
             "cell": last_move["cell"],
             "game_state": game.state
         }
     else:
-        return {"status": "No new moves"}
+        return {
+            "new_move": False,
+            "game_state": game.state
+        }
