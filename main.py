@@ -5,6 +5,7 @@ from argon2.exceptions import Argon2Error
 import jwt
 import secrets
 import sqlite3
+import re
 from invitations import InvitationManager
 from game import Game, GameManager
 from schemas import NewMove, Invitation, InvitationResponse
@@ -34,6 +35,22 @@ def verify_token(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=400, detail="Invalid token")
 
 
+def validate_username(username: str):
+    if not (2 <= len(username) <= 16):
+        raise HTTPException(status_code=400, detail="Username must be 2 to 16 characters long")
+
+    if not re.match(r"^[a-zA-Z0-9]+$", username):
+        raise HTTPException(status_code=400, detail="Username can have only English letters and numbers")
+
+
+def validate_password(password: str):
+    if not (8 <= len(password) <= 32):
+        raise HTTPException(status_code=400, detail="Password must be 8 to 32 characters long")
+
+    if not re.match(r"^[!-~]+$", password):
+        raise HTTPException(status_code=400, detail="Password can have only ASCII symbols excluding whitespace")
+
+
 @app.get("/check_availability")
 async def check_availability():
     return {"message": "Tic-tac-toe server is available here"}
@@ -43,6 +60,8 @@ async def check_availability():
 async def create_user(credentials: HTTPBasicCredentials = Depends(security)):
     username = credentials.username
     password = credentials.password
+    validate_username(username)
+    validate_password(password)
     hashed_password = ph.hash(password)
 
     with sqlite3.connect("users.sqlite") as connection:
