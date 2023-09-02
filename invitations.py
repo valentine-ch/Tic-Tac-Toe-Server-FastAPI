@@ -39,7 +39,15 @@ class InvitationManager:
         invitations = []
         for id, invitation in self.invitations.items():
             if invitation['inviter'] == inviter:
-                invitations.append(invitation)
+                invitation_details = {
+                    "invitation_id": id,
+                    "invited": invitation["invited"],
+                    "grid_properties": invitation["grid_properties"],
+                    "inviter_playing_x": invitation["inviter_playing_x"],
+                    "status": invitation["status"],
+                    "game_id": invitation["game_id"]
+                }
+                invitations.append(invitation_details)
         return invitations
 
     def cancel_invitation(self, invitation_id: str, username: str):
