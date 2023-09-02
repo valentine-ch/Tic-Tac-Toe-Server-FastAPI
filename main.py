@@ -220,6 +220,12 @@ async def cancel_invitation(invitation_id: str, username: str = Depends(verify_t
     return {"detail": "Invitation cancelled"}
 
 
+@app.get("/get_sent_invitations")
+async def get_sent_invitations(username: str = Depends(verify_token)):
+    invitations = invitation_manager.get_sent_invitations(username)
+    return {"sent_invitations": invitations}
+
+
 @app.post("/make_move")
 async def make_move(new_move: NewMove, username: str = Depends(verify_token)):
     game_id = new_move.game_id

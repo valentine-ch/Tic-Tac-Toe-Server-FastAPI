@@ -35,6 +35,13 @@ class InvitationManager:
                 invitations.append(invitation_details)
         return invitations
 
+    def get_sent_invitations(self, inviter: str):
+        invitations = []
+        for id, invitation in self.invitations.items():
+            if invitation['inviter'] == inviter:
+                invitations.append(invitation)
+        return invitations
+
     def cancel_invitation(self, invitation_id: str, username: str):
         if invitation_id not in self.invitations:
             raise HTTPException(status_code=404, detail="Invitation not found")
