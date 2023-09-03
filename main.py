@@ -123,6 +123,44 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
             raise HTTPException(status_code=400, detail="Incorrect username or password")
 
 
+@app.delete("/delete_account")
+async def delete_account(credentials: HTTPBasicCredentials = Depends(security)):
+    username = credentials.username
+    password = credentials.password
+
+    with sqlite3.connect("users.sqlite") as connection:
+        cursor = connection.cursor()
+
+        create_table_query = '''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            hashed_password TEXT NOT NULL
+        )
+        '''
+        cursor.execute(create_table_query)
+
+        select_query = "SELECT hashed_password FROM users WHERE username = ?"
+        cursor.execute(select_query, (username,))
+        result = cursor.fetchone()
+
+        if result is None:
+            raise HTTPException(status_code=400, detail="Username does not exist")
+
+        try:
+            if not ph.verify(result[0], password):
+                raise HTTPException(status_code=400, detail="Incorrect username or password")
+        except Argon2Error:
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+        try:
+            delete_query = "DELETE FROM users WHERE username = ?"
+            cursor.execute(delete_query, (username,))
+        except sqlite3.Error:
+            raise HTTPException(status_code=500, detail="Failed to delete account")
+
+        return {"status": "Account deleted"}
+
+
 @app.post("/start_waiting")
 async def start_waiting(username: str = Depends(verify_token)):
     waiting_users.add(username)
