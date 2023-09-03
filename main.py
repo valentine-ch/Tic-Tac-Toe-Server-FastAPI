@@ -137,7 +137,7 @@ async def stop_waiting(username: str = Depends(verify_token)):
 
 @app.get("/waiting_users")
 async def get_waiting_users(username: str = Depends(verify_token)):
-    return {"waiting_users": list(waiting_users)}
+    return {"waiting_users": list(waiting_users - {username})}
 
 
 @app.post("/invite")
