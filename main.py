@@ -247,7 +247,7 @@ async def make_move(new_move: NewMove, username: str = Depends(verify_token)):
 
 
 @app.get("/poll_game")
-async def poll_game(game_id, username: str = Depends(verify_token)):
+async def poll_game(game_id: str, username: str = Depends(verify_token)):
     game = game_manager.find_game_by_id(game_id)
     if game is None:
         raise HTTPException(status_code=404, detail="Game not found")
@@ -268,3 +268,30 @@ async def poll_game(game_id, username: str = Depends(verify_token)):
             "new_move": False,
             "game_state": game.state
         }
+
+
+@app.get("/get_full_game_state")
+async def get_full_game_state(game_id: str, username: str = Depends(verify_token)):
+    game = game_manager.find_game_by_id(game_id)
+    if game is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if username == game.x_player_name:
+        user_playing_x = True
+        user_turn = game.x_turn
+        opponent = game.o_player_name
+    elif username == game.o_player_name:
+        user_playing_x = False
+        user_turn = not game.x_turn
+        opponent = game.x_player_name
+    else:
+        raise HTTPException(status_code=403, detail="You are not a player in this game")
+
+    return {
+        "status": game.state,
+        "grid_properties": game.grid.get_grid_properties(),
+        "opponent": opponent,
+        "you_playing_x": user_playing_x,
+        "your_turn": user_turn,
+        "grid_state": game.grid.get_string_array()
+    }

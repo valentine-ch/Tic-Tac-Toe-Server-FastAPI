@@ -6,6 +6,13 @@ class States(Enum):
     X = 1
     O = 2
 
+    def __str__(self):
+        return {
+            States.EMPTY: "",
+            States.X: "X",
+            States.O: "O"
+        }[self]
+
 
 class Grid:
     def __init__(self, size: int, winning_line: int):
@@ -75,3 +82,12 @@ class Grid:
             if any(cell == States.EMPTY for cell in row):
                 return False
         return True
+
+    def get_grid_properties(self):
+        return {
+            "size": self.__size,
+            "winning_line": self.__winning_line
+        }
+
+    def get_string_array(self):
+        return [[str(cell) for cell in row] for row in self.__grid]
