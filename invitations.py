@@ -38,7 +38,7 @@ class InvitationManager:
     def get_sent_invitations(self, inviter: str):
         invitations = []
         for id, invitation in self.invitations.items():
-            if invitation['inviter'] == inviter:
+            if invitation['inviter'] == inviter and invitation['status'] != "cancelled":
                 invitation_details = {
                     "invitation_id": id,
                     "invited": invitation["invited"],
