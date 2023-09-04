@@ -394,7 +394,7 @@ async def play_again(details: PlayAgain, username: str = Depends(verify_token)):
             play_again_accepted(game)
 
             return {
-                "status": "New game stated",
+                "status": "New game started",
                 "new_game_id": game.next_game_id,
                 "switch_sides": game.switch_sides
             }
