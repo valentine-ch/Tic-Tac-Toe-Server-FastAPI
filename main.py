@@ -8,7 +8,7 @@ import sqlite3
 import re
 from invitations import InvitationManager
 from game import Game, GameManager
-from schemas import NewMove, Invitation, InvitationResponse
+from schemas import NewMove, Invitation, InvitationResponse, PlayAgain
 
 app = FastAPI()
 security = HTTPBasic()
@@ -190,10 +190,14 @@ async def invite_user(invitation: Invitation, inviter: str = Depends(verify_toke
             invitation.grid_properties.winning_line > invitation.grid_properties.size:
         raise HTTPException(status_code=400, detail="Grid properties not allowed")
 
+    if invitation.play_again_scheme not in {"same", "alternating", "winner_plays_x", "winner_plays_o"}:
+        raise HTTPException(status_code=400, detail="Unknown play again scheme")
+
     invitation_id = invitation_manager.create_invitation(inviter=inviter,
                                                          invited=invitation.invited,
                                                          grid_properties=invitation.grid_properties,
-                                                         inviter_playing_x=invitation.inviter_playing_x)
+                                                         inviter_playing_x=invitation.inviter_playing_x,
+                                                         play_again_scheme=invitation.play_again_scheme)
 
     return {"invitation_id": invitation_id}
 
@@ -225,9 +229,11 @@ async def respond_invitation(invitation_response: InvitationResponse, username: 
             winning_line = invitation["grid_properties"].winning_line
 
             if invitation["inviter_playing_x"]:
-                game_id = game_manager.create_game(invitation["inviter"], invitation["invited"], size, winning_line)
+                game_id = game_manager.create_game(invitation["inviter"], invitation["invited"],
+                                                   size, winning_line, invitation["play_again_scheme"])
             else:
-                game_id = game_manager.create_game(invitation["invited"], invitation["inviter"], size, winning_line)
+                game_id = game_manager.create_game(invitation["invited"], invitation["inviter"],
+                                                   size, winning_line, invitation["play_again_scheme"])
 
             waiting_users.discard(invitation["inviter"])
             waiting_users.discard(invitation["invited"])
@@ -331,5 +337,90 @@ async def get_full_game_state(game_id: str, username: str = Depends(verify_token
         "opponent": opponent,
         "you_playing_x": user_playing_x,
         "your_turn": user_turn,
-        "grid_state": game.grid.get_string_array()
+        "grid_state": game.grid.get_string_array(),
+        "play_again_scheme": game.play_again_scheme,
+        "play_again_status": game.play_again_status,
+        "next_game_id": game.next_game_id
     }
+
+
+def play_again_accepted(game: Game):
+    if (game.play_again_scheme == "alternating" or
+            (game.play_again_scheme == "winner_plays_x" and game.state == "won_by_o") or
+            (game.play_again_scheme == "winner_plays_o" and game.state == "won_by_x")):
+        game.switch_sides = True
+    else:
+        game.switch_sides = False
+
+    game.next_game_id = game_manager.create_game(x_player=(game.o_player_name if game.switch_sides
+                                                           else game.x_player_name),
+                                                 o_player=(game.x_player_name if game.switch_sides
+                                                           else game.o_player_name),
+                                                 size=game.grid.get_grid_properties()["size"],
+                                                 winning_line=game.grid.get_grid_properties()["winning_line"],
+                                                 play_again_scheme=game.play_again_scheme)
+
+    game.play_again_status = "accepted"
+
+
+@app.post("/play_again")
+async def play_again(details: PlayAgain, username: str = Depends(verify_token)):
+    game = game_manager.find_game_by_id(details.game_id)
+
+    if game is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if username != game.x_player_name and username != game.o_player_name:
+        raise HTTPException(status_code=403, detail="You are not a player in this game")
+
+    if game.state == "ongoing":
+        raise HTTPException(status_code=400, detail="You can't play again until current game is finished")
+
+    if details.play_again:
+        if game.play_again_status == "declined":
+            raise HTTPException(status_code=409, detail="Play again was declined")
+
+        if game.play_again_status is None:
+            game.play_again_status = "requested_by_x" if username == game.x_player_name else "requested_by_o"
+            return {"status": "Waiting for opponent to accept"}
+
+        if game.play_again_status == "requested_by_x" and username == game.x_player_name or \
+                game.play_again_status == "requested_by_o" and username == game.o_player_name:
+            return {"status": "Waiting for opponent to accept"}
+
+        if game.play_again_status == "requested_by_x" and username == game.o_player_name or \
+                game.play_again_status == "requested_by_o" and username == game.x_player_name:
+
+            play_again_accepted(game)
+
+            return {
+                "status": "New game stated",
+                "new_game_id": game.next_game_id,
+                "switch_sides": game.switch_sides
+            }
+    else:
+        if game.play_again_status == "accepted":
+            raise HTTPException(status_code=409, detail="Play again already accepted")
+
+        game.play_again_status = "declined"
+        return {"status": "Play again declined"}
+
+
+@app.get("/poll_play_again_status")
+async def poll_play_again_status(game_id: str, username: str = Depends(verify_token)):
+    game = game_manager.find_game_by_id(game_id)
+
+    if game is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if username != game.x_player_name and username != game.o_player_name:
+        raise HTTPException(status_code=403, detail="You are not a player in this game")
+
+    if game.play_again_status == "accepted":
+        return {
+            "play_again_status": game.play_again_status,
+            "next_game_id": game.next_game_id,
+            "switch_sides": game.switch_sides
+        }
+    else:
+        return {"play_again_status": game.play_again_status}

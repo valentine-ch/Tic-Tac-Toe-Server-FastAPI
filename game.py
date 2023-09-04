@@ -4,7 +4,7 @@ import uuid
 
 class Game:
     def __init__(self, x_player: str, o_player: str,
-                 size: int, winning_line: int):
+                 size: int, winning_line: int, play_again_scheme: str):
         self.id = uuid.uuid4()
         self.x_player_name = x_player
         self.o_player_name = o_player
@@ -12,6 +12,10 @@ class Game:
         self.x_turn = True
         self.last_move = None
         self.state = "ongoing"
+        self.play_again_scheme = play_again_scheme
+        self.play_again_status = None
+        self.next_game_id = None
+        self.switch_sides = None
 
     def update_state(self):
         if self.grid.has_won(States.X):
@@ -45,8 +49,8 @@ class GameManager:
         self.games = {}
 
     def create_game(self, x_player: str, o_player: str,
-                    size: int, winning_line: int):
-        new_game = Game(x_player, o_player, size, winning_line)
+                    size: int, winning_line: int, play_again_scheme: str):
+        new_game = Game(x_player, o_player, size, winning_line, play_again_scheme)
         self.games[str(new_game.id)] = new_game
         return new_game.id
 

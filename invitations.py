@@ -6,21 +6,19 @@ class InvitationManager:
     def __init__(self):
         self.invitations = {}
 
-    def create_invitation(self, inviter: str, invited: str, grid_properties: dict, inviter_playing_x: bool):
+    def create_invitation(self, inviter: str, invited: str, grid_properties: dict,
+                          inviter_playing_x: bool, play_again_scheme: str):
         invitation_id = str(uuid.uuid4())
         self.invitations[invitation_id] = {
             "inviter": inviter,
             "invited": invited,
             "grid_properties": grid_properties,
             "inviter_playing_x": inviter_playing_x,
+            "play_again_scheme": play_again_scheme,
             "status": "pending",
             "game_id": None
         }
         return invitation_id
-
-    # def get_invitations(self, user: str):
-    #     return [id for id, invitation in self.invitations.items() if
-    #             invitation['invited'] == user and invitation['status'] == "pending"]
 
     def get_invitations(self, user: str):
         invitations = []
@@ -30,7 +28,8 @@ class InvitationManager:
                     "invitation_id": id,
                     "inviter": invitation["inviter"],
                     "grid_properties": invitation["grid_properties"],
-                    "inviter_playing_x": invitation["inviter_playing_x"]
+                    "inviter_playing_x": invitation["inviter_playing_x"],
+                    "play_again_scheme": invitation["play_again_scheme"]
                 }
                 invitations.append(invitation_details)
         return invitations
@@ -44,6 +43,7 @@ class InvitationManager:
                     "invited": invitation["invited"],
                     "grid_properties": invitation["grid_properties"],
                     "inviter_playing_x": invitation["inviter_playing_x"],
+                    "play_again_scheme": invitation["play_again_scheme"],
                     "status": invitation["status"],
                     "game_id": invitation["game_id"]
                 }
