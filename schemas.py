@@ -10,7 +10,7 @@ class Invitation(BaseModel):
     invited: str
     grid_properties: GridProperties
     inviter_playing_x: bool
-    play_again_scheme: str = "Same"
+    play_again_scheme: str = "same"
 
 
 class NewMove(BaseModel):
