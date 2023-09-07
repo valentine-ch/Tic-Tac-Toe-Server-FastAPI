@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 from argon2 import PasswordHasher
 from argon2.exceptions import Argon2Error
 import jwt
@@ -365,7 +366,6 @@ def play_again_accepted(game: Game):
                                                  size=game.grid.get_grid_properties()["size"],
                                                  winning_line=game.grid.get_grid_properties()["winning_line"],
                                                  play_again_scheme=game.play_again_scheme)
-
     game.play_again_status = "accepted"
 
 
@@ -395,10 +395,9 @@ async def play_again(details: PlayAgain, username: str = Depends(verify_token)):
             return {"status": "Waiting for opponent to accept"}
 
         if game.play_again_status == "requested_by_x" and username == game.o_player_name or \
-                game.play_again_status == "requested_by_o" and username == game.x_player_name:
-
+                game.play_again_status == "requested_by_o" and username == game.x_player_name or \
+                game.play_again_status == "accepted":
             play_again_accepted(game)
-
             return {
                 "status": "New game started",
                 "new_game_id": game.next_game_id,
@@ -406,7 +405,14 @@ async def play_again(details: PlayAgain, username: str = Depends(verify_token)):
             }
     else:
         if game.play_again_status == "accepted":
-            raise HTTPException(status_code=409, detail="Play again already accepted")
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "detail": "Play again already accepted",
+                    "next_game_id": str(game.next_game_id),
+                    "switch_sides": game.switch_sides
+                }
+            )
 
         game.play_again_status = "declined"
         return {"status": "Play again declined"}
