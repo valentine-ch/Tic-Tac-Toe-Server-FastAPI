@@ -56,3 +56,18 @@ class GameManager:
 
     def find_game_by_id(self, game_id: str):
         return self.games.get(game_id)
+
+    def get_ongoing_games_by_username(self, username: str):
+        games = []
+        for id, game in self.games.items():
+            if game.state == "ongoing" and (username == game.x_player_name or username == game.o_player_name):
+                game_details = {
+                    "game_id": id,
+                    "opponent": (game.o_player_name if username == game.x_player_name
+                                 else game.x_player_name),
+                    "grid_properties": game.grid.get_grid_properties(),
+                    "you_playing_x": (username == game.x_player_name),
+                    "play_again_scheme": game.play_again_scheme
+                }
+                games.append(game_details)
+        return games

@@ -314,6 +314,12 @@ async def poll_game(game_id: str, username: str = Depends(verify_token)):
         }
 
 
+@app.get("/get_ongoing_games")
+async def get_ongoing_games(username: str = Depends(verify_token)):
+    games = game_manager.get_ongoing_games_by_username(username)
+    return {"ongoing_games": games}
+
+
 @app.get("/get_full_game_state")
 async def get_full_game_state(game_id: str, username: str = Depends(verify_token)):
     game = game_manager.find_game_by_id(game_id)
