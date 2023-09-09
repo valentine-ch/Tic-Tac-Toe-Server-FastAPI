@@ -409,7 +409,7 @@ async def play_again(details: PlayAgain, username: str = Depends(verify_token)):
                 status_code=409,
                 content={
                     "detail": "Play again already accepted",
-                    "next_game_id": str(game.next_game_id),
+                    "next_game_id": game.next_game_id,
                     "switch_sides": game.switch_sides
                 }
             )

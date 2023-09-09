@@ -5,7 +5,6 @@ import uuid
 class Game:
     def __init__(self, x_player: str, o_player: str,
                  size: int, winning_line: int, play_again_scheme: str):
-        self.id = uuid.uuid4()
         self.x_player_name = x_player
         self.o_player_name = o_player
         self.grid = Grid(size, winning_line)
@@ -50,9 +49,10 @@ class GameManager:
 
     def create_game(self, x_player: str, o_player: str,
                     size: int, winning_line: int, play_again_scheme: str):
+        game_id = str(uuid.uuid4())
         new_game = Game(x_player, o_player, size, winning_line, play_again_scheme)
-        self.games[str(new_game.id)] = new_game
-        return new_game.id
+        self.games[game_id] = new_game
+        return game_id
 
     def find_game_by_id(self, game_id: str):
         return self.games.get(game_id)
