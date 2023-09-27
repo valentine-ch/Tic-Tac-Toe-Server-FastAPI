@@ -520,7 +520,7 @@ async def play_again(request_body: PlayAgain, username: str = Depends(verify_tok
                 }
             )
 
-        games.update_one({"_id": ObjectId(game["game_id"])}, {"$set": {"play_again_status": "declined"}})
+        games.update_one({"_id": ObjectId(game["_id"])}, {"$set": {"play_again_status": "declined"}})
         return {"status": "Play again declined"}
 
 
