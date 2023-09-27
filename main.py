@@ -448,8 +448,8 @@ def play_again_accepted(game: dict):
 
     game["next_game_id"] = create_game(x_player=(game["o_player_name"] if game["switch_sides"]
                                                  else game["x_player_name"]),
-                                       o_player=(game["o_player_name"] if game["switch_sides"]
-                                                 else game["x_player_name"]),
+                                       o_player=(game["x_player_name"] if game["switch_sides"]
+                                                 else game["o_player_name"]),
                                        size=game["grid_properties"]["size"],
                                        winning_line=game["grid_properties"]["winning_line"],
                                        play_again_scheme=game["play_again_scheme"])
@@ -494,14 +494,21 @@ async def play_again(request_body: PlayAgain, username: str = Depends(verify_tok
             return {"status": "Waiting for opponent to accept"}
 
         if game["play_again_status"] == "requested_by_x" and username == game["o_player_name"] or \
-                game["play_again_status"] == "requested_by_o" and username == game["x_player_name"] or \
-                game["play_again_status"] == "accepted":
+                game["play_again_status"] == "requested_by_o" and username == game["x_player_name"]:
             play_again_accepted(game)
             return {
                 "status": "New game started",
                 "new_game_id": game["next_game_id"],
                 "switch_sides": game["switch_sides"]
             }
+
+        if game["play_again_status"] == "accepted":
+            return {
+                "status": "New game started",
+                "new_game_id": game["next_game_id"],
+                "switch_sides": game["switch_sides"]
+            }
+
     else:
         if game["play_again_status"] == "accepted":
             return JSONResponse(
