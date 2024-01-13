@@ -6,10 +6,7 @@ from argon2.exceptions import Argon2Error
 import jwt
 import secrets
 import re
-# from invitations import InvitationManager
-# from game import Game, GameManager
 from schemas import NewMove, Invitation, InvitationResponse, PlayAgain
-
 from database import users, waiting_users, invitations, games, handle_db_exception
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from bson import ObjectId
@@ -20,8 +17,6 @@ security = HTTPBasic()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 ph = PasswordHasher()
 secret_key = secrets.token_hex(256)
-# game_manager = GameManager()
-# invitation_manager = InvitationManager()
 
 
 def generate_token(username):
